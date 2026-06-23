@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { LayoutGrid } from "lucide-react";
 import type { SectorAnalysis } from "@/lib/types";
 import { PhaseBadge, ConvictionBadge } from "./primitives";
 import { WaveLifecycle } from "./WaveLifecycle";
@@ -38,7 +39,12 @@ export function SectorTable({ sectors }: { sectors: SectorAnalysis[] }) {
 
   return (
     <section className="card p-6">
-      <h2 className="mb-1 text-lg font-semibold text-white">All Sectors</h2>
+      <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-white">
+        <span className="icon-tile h-7 w-7" style={{ background: "#a78bfa1a", borderColor: "#a78bfa44", color: "#a78bfa" }}>
+          <LayoutGrid size={15} strokeWidth={2.4} />
+        </span>
+        All Sectors
+      </h2>
       <p className="mb-4 text-xs text-white/45">
         The full board — click a column to sort. Heat ranks the current leaders; Exit flags
         exhaustion; Inflow ranks rotation destinations.

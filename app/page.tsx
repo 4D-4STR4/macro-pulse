@@ -1,13 +1,7 @@
 import { getMarketData } from "@/lib/data/provider";
 import { analyzeDaily } from "@/lib/engine";
 import { themeAnalysisFor } from "@/lib/themesService";
-import { DailyPulse } from "./components/DailyPulse";
-import { HottestWave } from "./components/HottestWave";
-import { RotationMap } from "./components/RotationMap";
-import { ThemesBoard } from "./components/ThemesBoard";
-import { Playbook } from "./components/Playbook";
-import { SectorTable } from "./components/SectorTable";
-import { WatchlistPanel } from "./components/watchlist/WatchlistPanel";
+import { DashboardView } from "./components/dashboard/DashboardView";
 import { CYCLE_META } from "@/lib/ui";
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -60,17 +54,11 @@ export default async function Home() {
         </div>
       )}
 
-      <div className="space-y-6">
-        <DailyPulse analysis={analysis} />
-        <WatchlistPanel sectors={analysis.sectors} />
-        <HottestWave a={analysis.hottest} />
-        <RotationMap analysis={analysis} />
-        {themeAnalysis && (
-          <ThemesBoard analysis={themeAnalysis} live={!market.themes?.length} />
-        )}
-        <Playbook nextWave={analysis.nextWave} exiting={analysis.exiting} />
-        <SectorTable sectors={analysis.sectors} />
-      </div>
+      <DashboardView
+        analysis={analysis}
+        themeAnalysis={themeAnalysis}
+        themesLive={!market.themes?.length}
+      />
 
       <Methodology benchmark={analysis.benchmark} />
 
