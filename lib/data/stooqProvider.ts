@@ -55,11 +55,44 @@ export async function fetchDailySeries(ticker: string): Promise<DailyRow[]> {
  * live sector/theme prices work on a deploy with no API key.
  */
 async function fetchCsv(ticker: string): Promise<DailyRow[]> {
+  // FMP first when a key is present — it's reliable from datacenter/serverless
+  // IPs where keyless feeds (Yahoo chart, Stooq) are often blocked.
+  if (process.env.FMP_API_KEY) {
+    try {
+      return await fetchFmpPrices(ticker);
+    } catch {
+      /* fall through to keyless sources */
+    }
+  }
   try {
     return await fetchYahooChart(ticker);
   } catch {
     return await fetchStooqCsv(ticker);
   }
+}
+
+/** Financial Modeling Prep daily EOD prices (keyed, datacenter-friendly). */
+async function fetchFmpPrices(ticker: string): Promise<DailyRow[]> {
+  const sym = ticker.toUpperCase();
+  const url = `https://financialmodelingprep.com/api/v3/historical-price-full/${encodeURIComponent(sym)}?timeseries=150&apikey=${process.env.FMP_API_KEY}`;
+  const init: RequestInit & { next?: { revalidate: number } } = {
+    next: { revalidate: 1800 },
+    signal: AbortSignal.timeout(5000),
+  };
+  const res = await fetch(url, init);
+  if (!res.ok) throw new Error(`FMP ${sym} -> ${res.status}`);
+  const json = (await res.json()) as { historical?: Array<{ date?: string; close?: number; volume?: number }> };
+  const hist = json?.historical;
+  if (!hist || hist.length < 2) throw new Error(`FMP ${sym} returned no series`);
+  // FMP returns newest-first; reverse to ascending.
+  const rows: DailyRow[] = [];
+  for (let i = hist.length - 1; i >= 0; i--) {
+    const h = hist[i];
+    if (!h.date || h.close == null || !Number.isFinite(h.close) || h.close <= 0) continue;
+    rows.push({ date: h.date, close: h.close, volume: Number.isFinite(h.volume ?? NaN) ? (h.volume as number) : 0 });
+  }
+  if (rows.length < 2) throw new Error(`FMP ${sym} returned no usable rows`);
+  return rows;
 }
 
 /** Like fetchCsv but resolves to null instead of throwing — for per-sector resilience. */
