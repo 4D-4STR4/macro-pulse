@@ -1,10 +1,11 @@
 import { getMarketData } from "@/lib/data/provider";
 import { analyzeDaily } from "@/lib/engine";
-import { analyzeThemes } from "@/lib/engine/themes";
+import { themeAnalysisFor } from "@/lib/themesService";
 import { normalizeSymbol, TICKER_COVERAGE } from "@/lib/data/tickers";
 import { themesForTicker } from "@/lib/data/themes";
 import { classifyTicker } from "@/lib/data/classifyTicker";
 import { fetchDailySeries } from "@/lib/data/stooqProvider";
+import type { MarketAnalysis } from "@/lib/types";
 import {
   computeStockScore,
   mapTicker,
@@ -36,15 +37,15 @@ export async function buildTickerMap(rawSymbol: string): Promise<TickerMap> {
   ]);
   const analysis = analyzeDaily(market);
 
-  // Score the cross-cutting themes this ticker rides (independent of its sector).
-  const themes = readTickerThemes(symbol, market);
+  // Score the cross-cutting themes this ticker rides (snapshot seed or live).
+  const themeMA = await themeAnalysisFor(market);
+  const themes = readTickerThemes(symbol, themeMA);
 
   return mapTicker(result, symbol, analysis, TICKER_COVERAGE, { stock, themes });
 }
 
-/** Build the theme reads for a ticker from the (themed) snapshot. */
-function readTickerThemes(symbol: string, market: Parameters<typeof analyzeThemes>[0]): ThemeRead[] {
-  const themeMA = analyzeThemes(market);
+/** Build the theme reads for a ticker from the analyzed themes. */
+function readTickerThemes(symbol: string, themeMA: MarketAnalysis | null): ThemeRead[] {
   if (!themeMA) return [];
   const defs = themesForTicker(symbol);
   const reads: ThemeRead[] = [];

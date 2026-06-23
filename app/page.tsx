@@ -1,8 +1,10 @@
 import { getMarketData } from "@/lib/data/provider";
 import { analyzeDaily } from "@/lib/engine";
+import { themeAnalysisFor } from "@/lib/themesService";
 import { DailyPulse } from "./components/DailyPulse";
 import { HottestWave } from "./components/HottestWave";
 import { RotationMap } from "./components/RotationMap";
+import { ThemesBoard } from "./components/ThemesBoard";
 import { Playbook } from "./components/Playbook";
 import { SectorTable } from "./components/SectorTable";
 import { WatchlistPanel } from "./components/watchlist/WatchlistPanel";
@@ -21,6 +23,7 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const market = await getMarketData();
   const analysis = analyzeDaily(market);
+  const themeAnalysis = await themeAnalysisFor(market);
   const asOf = new Date(analysis.asOf);
 
   return (
@@ -72,6 +75,9 @@ export default async function Home() {
         <WatchlistPanel sectors={analysis.sectors} />
         <HottestWave a={analysis.hottest} />
         <RotationMap analysis={analysis} />
+        {themeAnalysis && (
+          <ThemesBoard analysis={themeAnalysis} live={!market.themes?.length} />
+        )}
         <Playbook nextWave={analysis.nextWave} exiting={analysis.exiting} />
         <SectorTable sectors={analysis.sectors} />
       </div>
