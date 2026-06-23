@@ -17,13 +17,13 @@ export function TickerMapView({ map }: { map: TickerMap }) {
         <TickerSearch />
       </div>
 
-      {!map.found ? (
+      {!map.sector && !map.stock ? (
         <UnknownCard map={map} />
       ) : (
         <div className="space-y-5">
           <HeaderCard map={map} roleColor={role.color} roleLabel={role.label} />
           <div className="grid gap-5 lg:grid-cols-2">
-            <SectorCard map={map} />
+            {map.sector ? <SectorCard map={map} /> : <UnclassifiedSectorCard map={map} />}
             <StockCard map={map} />
           </div>
           <CombinedCard map={map} roleColor={role.color} />
@@ -113,6 +113,23 @@ function SectorCard({ map }: { map: TickerMap }) {
         </Link>
       </div>
       <p className="mt-3 text-sm" style={{ color: PHASE_META[s.phase].color }}>{s.verdict}</p>
+    </section>
+  );
+}
+
+function UnclassifiedSectorCard({ map }: { map: TickerMap }) {
+  return (
+    <section className="card p-5">
+      <h2 className="mb-3 text-sm font-semibold text-white">Sector context</h2>
+      <div className="rounded-lg border border-dashed border-white/15 bg-black/20 p-4 text-sm text-white/55">
+        <p className="font-medium text-white/70">
+          {map.fund ? "Fund / ETF — no single sector." : "Sector unclassified."}
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-white/45">{map.roleReason}</p>
+        <p className="mt-2 text-[11px] text-white/35">
+          No sector-rotation role is applied — we don&apos;t assign a sector we can&apos;t confirm.
+        </p>
+      </div>
     </section>
   );
 }

@@ -1,5 +1,5 @@
 import type { MarketAnalysis, SectorAnalysis, WavePhase, SignalDirection } from "@/lib/types";
-import type { TickerClassification } from "@/lib/data/tickers";
+import type { ClassifyResult } from "@/lib/data/classifyTicker";
 import { clamp, round, mean, tail, normalizedSlope } from "./util";
 
 /**
@@ -75,6 +75,11 @@ export interface TickerMap {
   role: SectorRole | "unknown";
   roleLabel: string;
   roleReason: string;
+
+  /** How the sector was determined (transparency). */
+  via: "curated" | "live" | "none";
+  classificationSource?: "fmp" | "yahoo";
+  fund?: boolean;
 
   sector?: SectorContext;
   stock?: StockScore;
@@ -270,32 +275,75 @@ function alignmentNote(role: SectorRole, strength: "strong" | "average" | "weak"
 }
 
 export function mapTicker(
-  classification: TickerClassification | null,
+  result: ClassifyResult,
   rawSymbol: string,
   analysis: MarketAnalysis,
   coverage: number,
   opts?: { stock?: StockScore },
 ): TickerMap {
+  const classification = result.classification;
+  const stock = opts?.stock;
   const baseCaveats = [
     "Sector classification is GICS-based; verify for multi-segment or recently reclassified companies.",
     "Research only — not investment advice.",
   ];
+  const symbol = (classification?.symbol ?? rawSymbol).toUpperCase();
 
-  // --- unknown ticker: refuse to guess ---
+  // --- no sector classification ---
   if (!classification) {
+    // If we at least have the stock's own price, still give a useful read.
+    if (stock) {
+      const conf = round(clamp(40 + Math.abs(stock.score - 50) * 0.5));
+      return {
+        symbol,
+        found: false,
+        name: result.name,
+        via: result.via,
+        classificationSource: result.source,
+        fund: result.fund,
+        role: "unknown",
+        roleLabel: result.fund ? "Fund / ETF" : "Sector unclassified",
+        roleReason: result.fund
+          ? "This is a fund/ETF/index, not a single-sector equity — no sector-rotation role applies."
+          : "We couldn't place this symbol in one of the 11 sectors, so we show its own price score without a sector role.",
+        stock,
+        stockDataAvailable: true,
+        combined: {
+          headline: `${result.name ?? symbol} — ${result.fund ? "fund/ETF" : "sector unclassified"}; showing the stock's own score.`,
+          reasoning: [
+            `Stock: ${symbol}'s own technical score is ${stock.score}/100 (${stock.trend}) — 1m ${fmt(stock.stats.ret1m)}, ${stock.stats.rs1m !== null ? `${fmt(stock.stats.rs1m)} vs SPY (1m), ` : ""}${fmt(stock.stats.pctFromHigh)} from its 90-day high.`,
+            result.fund
+              ? "No single sector applies to a fund/ETF, so there's no rotation role — use the dashboard for sector-level rotation."
+              : "We won't assign a sector we can't confirm, so there's no sector-rotation context for this name.",
+          ],
+          confidence: conf,
+          confidenceLabel: conf >= 66 ? "High" : conf >= 40 ? "Moderate" : "Low",
+        },
+        caveats: ["Sector context omitted — only the stock's own price action is scored.", ...baseCaveats],
+        dataSource: analysis.source,
+        asOf: analysis.asOf,
+        coverage,
+      };
+    }
+    // Nothing at all: refuse to guess.
     return {
-      symbol: rawSymbol.toUpperCase(),
+      symbol,
       found: false,
+      name: result.name,
+      via: result.via,
+      classificationSource: result.source,
+      fund: result.fund,
       role: "unknown",
       roleLabel: "Unclassified",
-      roleReason:
-        "We don't have a confident sector classification for this symbol, so we won't guess.",
+      roleReason: "We don't have a confident sector classification for this symbol, so we won't guess.",
       stockDataAvailable: false,
       combined: {
-        headline: `No confident classification for ${rawSymbol.toUpperCase()}`,
+        headline: `No confident classification for ${symbol}`,
         reasoning: [
-          "This symbol isn't in our curated US-equity coverage. It may be an ETF, ADR, non-US listing, crypto, or a smaller name we don't map.",
-          "Rather than assign a sector that could mislead you, we leave it unclassified. Try a major US-listed ticker, or check the sector board directly.",
+          result.fund
+            ? "This looks like a fund/ETF/index, not a single-sector equity."
+            : "We couldn't classify this symbol (it may be a non-US listing, crypto, or a name our live lookup couldn't resolve), and live price data wasn't reachable either.",
+          "Rather than assign a sector that could mislead you, we leave it unclassified. Try a US-listed ticker, or check the sector board directly.",
         ],
         confidence: 0,
         confidenceLabel: "Low",
@@ -309,7 +357,6 @@ export function mapTicker(
 
   const sa = analysis.sectors.find((s) => s.sector.id === classification.sectorId)!;
   const { role, reason } = sectorRole(sa, analysis);
-  const stock = opts?.stock;
   const stockDataAvailable = !!stock;
 
   const sector: SectorContext = {
@@ -390,6 +437,11 @@ export function mapTicker(
       "No live stock price — the stock's individual score is omitted rather than estimated.",
     );
   }
+  if (result.via === "live") {
+    caveats.unshift(
+      `Sector resolved via live lookup (${result.source === "fmp" ? "FMP" : "keyless, unofficial"}) — verify for edge cases.`,
+    );
+  }
 
   return {
     symbol: classification.symbol,
@@ -400,6 +452,8 @@ export function mapTicker(
       sectorName: classification.sectorName,
       sectorEtf: classification.sectorEtf,
     },
+    via: result.via,
+    classificationSource: result.source,
     role,
     roleLabel: ROLE_LABEL[role],
     roleReason: reason,
