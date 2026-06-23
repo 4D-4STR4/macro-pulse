@@ -1,9 +1,19 @@
 import { getMarketData } from "@/lib/data/provider";
 import { analyzeDaily } from "@/lib/engine";
+import { analyzeThemes } from "@/lib/engine/themes";
 import { normalizeSymbol, TICKER_COVERAGE } from "@/lib/data/tickers";
+import { themesForTicker } from "@/lib/data/themes";
 import { classifyTicker } from "@/lib/data/classifyTicker";
 import { fetchDailySeries } from "@/lib/data/stooqProvider";
-import { computeStockScore, mapTicker, type TickerMap, type StockScore } from "@/lib/engine/ticker";
+import {
+  computeStockScore,
+  mapTicker,
+  unitRole,
+  ROLE_LABEL,
+  type TickerMap,
+  type StockScore,
+  type ThemeRead,
+} from "@/lib/engine/ticker";
 
 /**
  * Build the full Ticker Map for ANY symbol:
@@ -18,14 +28,44 @@ import { computeStockScore, mapTicker, type TickerMap, type StockScore } from "@
 export async function buildTickerMap(rawSymbol: string): Promise<TickerMap> {
   const symbol = normalizeSymbol(rawSymbol);
 
-  // Classify, fetch market analysis, and fetch the stock's own series in parallel.
-  const [result, analysis, stock] = await Promise.all([
+  // Classify, fetch market data, and fetch the stock's own series in parallel.
+  const [result, market, stock] = await Promise.all([
     classifyTicker(symbol),
-    getMarketData().then(analyzeDaily),
+    getMarketData(),
     tryStockScore(symbol),
   ]);
+  const analysis = analyzeDaily(market);
 
-  return mapTicker(result, symbol, analysis, TICKER_COVERAGE, { stock });
+  // Score the cross-cutting themes this ticker rides (independent of its sector).
+  const themes = readTickerThemes(symbol, market);
+
+  return mapTicker(result, symbol, analysis, TICKER_COVERAGE, { stock, themes });
+}
+
+/** Build the theme reads for a ticker from the (themed) snapshot. */
+function readTickerThemes(symbol: string, market: Parameters<typeof analyzeThemes>[0]): ThemeRead[] {
+  const themeMA = analyzeThemes(market);
+  if (!themeMA) return [];
+  const defs = themesForTicker(symbol);
+  const reads: ThemeRead[] = [];
+  for (const def of defs) {
+    const ta = themeMA.sectors.find((s) => s.sector.id === def.id);
+    if (!ta) continue;
+    const { role } = unitRole(ta, themeMA);
+    reads.push({
+      id: def.id,
+      name: def.name,
+      heatScore: ta.heatScore,
+      heatRank: ta.heatRank,
+      totalThemes: themeMA.sectors.length,
+      phase: ta.phase,
+      exitScore: ta.exitScore,
+      role,
+      roleLabel: ROLE_LABEL[role],
+      conviction: { score: ta.conviction.score, direction: ta.conviction.direction },
+    });
+  }
+  return reads.sort((a, b) => b.heatScore - a.heatScore);
 }
 
 /** Stooq uses dashes for class shares (BRK.B → brk-b). */

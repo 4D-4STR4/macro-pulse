@@ -233,49 +233,92 @@ function buildBenchmark() {
   return price;
 }
 
+// --- themes (cross-cutting narratives, scored like sectors) ------------------
+// Real-context late-June-2026 read: the AI buildout (compute, optical, power,
+// nuclear, memory) is hot; quantum/semis stretched; GLP-1 and crypto cooling;
+// EV in decline. etf is "" (themes are baskets, not a single ETF).
+const THEME_SCENARIOS = [
+  { id: "ai-infrastructure", name: "AI Infrastructure", phase: "momentum", p0: 140, mag: 1.5, social: 14, pop: 1.8, breadth: 76, seed: 211,
+    description: "Compute/networking buildout behind AI.", leaders: ["NVDA", "AVGO", "ANET", "VRT"] },
+  { id: "datacenter-power", name: "Datacenter Power", phase: "momentum", p0: 120, mag: 1.35, social: 8, pop: 1.1, breadth: 73, seed: 212,
+    description: "Electrification & power for AI datacenters.", leaders: ["VST", "CEG", "GEV", "ETN"] },
+  { id: "optical-networking", name: "Optical / Networking", phase: "momentum", p0: 95, mag: 1.6, social: 7, pop: 1.0, breadth: 72, seed: 213,
+    description: "Optical interconnect & datacenter networking.", leaders: ["CIEN", "COHR", "NOK", "ANET"] },
+  { id: "nuclear-uranium", name: "Nuclear / Uranium", phase: "momentum", p0: 60, mag: 1.7, social: 9, pop: 1.0, breadth: 70, seed: 214,
+    description: "Nuclear revival & uranium for AI-era demand.", leaders: ["CEG", "OKLO", "CCJ", "SMR"] },
+  { id: "memory", name: "Memory", phase: "momentum", p0: 110, mag: 1.5, social: 5, pop: 0.8, breadth: 71, seed: 215,
+    description: "DRAM/NAND & HBM supercycle.", leaders: ["MU", "WDC", "STX", "SNDK"] },
+  { id: "semiconductors", name: "Semiconductors", phase: "climax", p0: 180, mag: 1.4, social: 12, pop: 1.5, breadth: 60, seed: 216,
+    description: "The chip cycle — logic, foundry, equipment.", leaders: ["NVDA", "AMD", "AVGO", "TSM"] },
+  { id: "quantum", name: "Quantum Computing", phase: "climax", p0: 40, mag: 2.2, social: 8, pop: 0.8, breadth: 50, seed: 217,
+    description: "Quantum hardware — speculative, narrative-driven.", leaders: ["IONQ", "RGTI", "QBTS", "QUBT"] },
+  { id: "defense", name: "Defense", phase: "momentum", p0: 150, mag: 1.0, social: 6, pop: 0.9, breadth: 70, seed: 218,
+    description: "Defense primes & tech — elevated spending.", leaders: ["LMT", "RTX", "PLTR", "GD"] },
+  { id: "cybersecurity", name: "Cybersecurity", phase: "momentum", p0: 130, mag: 0.9, social: 6, pop: 1.0, breadth: 66, seed: 219,
+    description: "Security software consolidation.", leaders: ["PANW", "CRWD", "FTNT", "ZS"] },
+  { id: "copper-electrification", name: "Copper / Electrification", phase: "emerging", p0: 85, mag: 0.95, social: 4, pop: 0.7, breadth: 64, seed: 220,
+    description: "Copper & electrification — grid/EV/AI demand.", leaders: ["FCX", "SCCO", "ETN", "TECK"] },
+  { id: "robotics-automation", name: "Robotics / Automation", phase: "emerging", p0: 100, mag: 0.85, social: 5, pop: 0.8, breadth: 60, seed: 221,
+    description: "Automation, humanoids, surgical robotics.", leaders: ["ISRG", "TSLA", "ROK", "SYM"] },
+  { id: "space", name: "Space", phase: "emerging", p0: 70, mag: 1.1, social: 5, pop: 0.8, breadth: 58, seed: 222,
+    description: "Launch, satellites & space infrastructure.", leaders: ["RKLB", "ASTS", "LUNR", "RTX"] },
+  { id: "glp1-obesity", name: "GLP-1 / Obesity", phase: "distribution", p0: 160, mag: 1.3, social: 9, pop: 1.2, breadth: 42, seed: 223,
+    description: "GLP-1 weight-loss & metabolic drugs.", leaders: ["LLY", "NVO", "VKTX", "AMGN"] },
+  { id: "crypto-blockchain", name: "Crypto / Blockchain", phase: "distribution", p0: 120, mag: 1.8, social: 10, pop: 1.3, breadth: 40, seed: 224,
+    description: "Crypto-levered equities — exchanges, miners.", leaders: ["COIN", "MSTR", "MARA", "HOOD"] },
+  { id: "ev-battery", name: "EV / Battery", phase: "decline", p0: 110, mag: 1.1, social: 6, pop: 1.0, breadth: 34, seed: 225,
+    description: "Electric vehicles & batteries.", leaders: ["TSLA", "RIVN", "LCID", "QS"] },
+].map((t) => ({ ...t, etf: "" }));
+
+/** Build one snapshot entry (sector or theme) from its scenario config. */
+function buildEntry(cfg, bRet1m, bRet3m) {
+  const s = buildSeries(cfg);
+  const price = s.price;
+  const ret1m = tr(price, 21);
+  const ret3m = tr(price, 63);
+  return {
+    cfg,
+    series: s,
+    snap: {
+      id: cfg.id,
+      name: cfg.name,
+      etf: cfg.etf,
+      description: cfg.description,
+      leaders: cfg.leaders,
+      price: round(price[price.length - 1], 2),
+      ret1d: round(tr(price, 1), 2),
+      ret1w: round(tr(price, 5), 2),
+      ret1m: round(ret1m, 2),
+      ret3m: round(ret3m, 2),
+      retYtd: round(tr(price, DAYS - 1), 2),
+      rs1m: round(ret1m - bRet1m, 2),
+      rs3m: round(ret3m - bRet3m, 2),
+      galaxyScore: round(s.galaxy[s.galaxy.length - 1], 1),
+      altRank: 0, // filled after ranking
+      socialDominance: round(s.social[s.social.length - 1], 2),
+      sentiment: round(s.sentiment[s.sentiment.length - 1], 1),
+      interactions: s.interactions[s.interactions.length - 1],
+      breadth: cfg.breadth,
+      history: s.history,
+    },
+  };
+}
+
+/** AltRank within a group by galaxy score (1 = best). */
+function rankAlt(entries) {
+  [...entries].sort((a, b) => b.snap.galaxyScore - a.snap.galaxyScore).forEach((b, i) => (b.snap.altRank = i + 1));
+}
+
 function main() {
   const bench = buildBenchmark();
   const bRet1m = tr(bench, 21);
   const bRet3m = tr(bench, 63);
 
   // First pass: build each sector's series + snapshot scalars.
-  const built = SECTORS.map((cfg) => {
-    const s = buildSeries(cfg);
-    const price = s.price;
-    const ret1m = tr(price, 21);
-    const ret3m = tr(price, 63);
-    return {
-      cfg,
-      series: s,
-      snap: {
-        id: cfg.id,
-        name: cfg.name,
-        etf: cfg.etf,
-        description: cfg.description,
-        leaders: cfg.leaders,
-        price: round(price[price.length - 1], 2),
-        ret1d: round(tr(price, 1), 2),
-        ret1w: round(tr(price, 5), 2),
-        ret1m: round(ret1m, 2),
-        ret3m: round(ret3m, 2),
-        retYtd: round(tr(price, DAYS - 1), 2),
-        rs1m: round(ret1m - bRet1m, 2),
-        rs3m: round(ret3m - bRet3m, 2),
-        galaxyScore: round(s.galaxy[s.galaxy.length - 1], 1),
-        altRank: 0, // filled after ranking
-        socialDominance: round(s.social[s.social.length - 1], 2),
-        sentiment: round(s.sentiment[s.sentiment.length - 1], 1),
-        interactions: s.interactions[s.interactions.length - 1],
-        breadth: cfg.breadth,
-        history: s.history,
-      },
-    };
-  });
-
-  // AltRank: rank by galaxy score (1 = best).
-  [...built]
-    .sort((a, b) => b.snap.galaxyScore - a.snap.galaxyScore)
-    .forEach((b, i) => (b.snap.altRank = i + 1));
+  const built = SECTORS.map((cfg) => buildEntry(cfg, bRet1m, bRet3m));
+  rankAlt(built);
+  const builtThemes = THEME_SCENARIOS.map((cfg) => buildEntry(cfg, bRet1m, bRet3m));
+  rankAlt(builtThemes);
 
   const snapshot = {
     asOf: AS_OF,
@@ -288,6 +331,7 @@ function main() {
       "Real-context seed snapshot (late June 2026). Synthetic-but-faithful sector paths; " +
       "replaced by live data when LUNARCRUSH_API_KEY is set.",
     sectors: built.map((b) => b.snap),
+    themes: builtThemes.map((b) => b.snap),
   };
 
   const outDir = join(ROOT, "data");
@@ -299,7 +343,10 @@ function main() {
   const summary = built
     .map((b) => `${b.snap.etf.padEnd(5)} ${b.cfg.phase.padEnd(13)} 3m ${String(b.snap.ret3m).padStart(6)}%  soc ${b.snap.socialDominance}`)
     .join("\n");
-  console.log(`Wrote ${out}\n${summary}`);
+  const themeSummary = builtThemes
+    .map((b) => `${b.snap.id.padEnd(24)} ${b.cfg.phase.padEnd(13)} 3m ${String(b.snap.ret3m).padStart(6)}%  soc ${b.snap.socialDominance}`)
+    .join("\n");
+  console.log(`Wrote ${out}\nSECTORS:\n${summary}\nTHEMES:\n${themeSummary}`);
 }
 
 main();

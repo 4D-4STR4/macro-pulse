@@ -26,6 +26,7 @@ export function TickerMapView({ map }: { map: TickerMap }) {
             {map.sector ? <SectorCard map={map} /> : <UnclassifiedSectorCard map={map} />}
             <StockCard map={map} />
           </div>
+          {map.themes.length > 0 && <ThemesCard map={map} />}
           <CombinedCard map={map} roleColor={role.color} />
           <Caveats caveats={map.caveats} source={map.dataSource} />
         </div>
@@ -169,6 +170,52 @@ function StockCard({ map }: { map: TickerMap }) {
         <MiniStat label="3M" v={st.stats.ret3m} />
         <MiniStat label="RS 1M" v={st.stats.rs1m} />
       </div>
+    </section>
+  );
+}
+
+function ThemesCard({ map }: { map: TickerMap }) {
+  const hot = map.themes.find((t) => t.role === "leader" || t.role === "rotate-in");
+  return (
+    <section className="card p-5">
+      <div className="mb-1 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-white">Themes driving this name</h2>
+        <span className="metric text-[10px] text-white/30">scored independently of the GICS sector</span>
+      </div>
+      <p className="mb-4 text-xs text-white/45">
+        Cross-cutting narratives this ticker rides. A hot theme can lift a name even when its broad
+        sector is soft.
+      </p>
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        {map.themes.map((t) => {
+          const rm = ROLE_META[t.role] ?? ROLE_META.neutral;
+          return (
+            <div key={t.id} className="flex items-center justify-between rounded-lg border border-white/5 bg-black/20 p-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-sm font-medium text-white/90">{t.name}</span>
+                  <PhaseBadge phase={t.phase} />
+                </div>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="chip border text-[10px]" style={{ background: `${rm.color}1a`, borderColor: `${rm.color}55`, color: rm.color }}>
+                    {rm.label}
+                  </span>
+                  <span className="metric text-[10px] text-white/35">#{t.heatRank} of {t.totalThemes} themes</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="metric text-lg font-semibold" style={{ color: heatColor(t.heatScore) }}>{t.heatScore}</span>
+                <div className="label">heat</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {hot && (
+        <p className="mt-3 text-xs" style={{ color: ROLE_META[hot.role].color }}>
+          Strongest tailwind: <span className="font-medium">{hot.name}</span> ({hot.roleLabel.toLowerCase()}, heat {hot.heatScore}).
+        </p>
+      )}
     </section>
   );
 }

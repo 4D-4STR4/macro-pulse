@@ -52,6 +52,9 @@ export interface SectorSnapshot {
   history: SectorHistoryPoint[];
 }
 
+/** A theme is scored with the same machinery as a sector (structurally identical). */
+export type ThemeSnapshot = SectorSnapshot;
+
 /** The dataset a provider hands back. */
 export interface MarketSnapshot {
   asOf: string; // ISO timestamp
@@ -64,6 +67,8 @@ export interface MarketSnapshot {
   source: "snapshot" | "lunarcrush" | "stooq";
   note?: string;
   sectors: SectorSnapshot[];
+  /** Cross-cutting theme baskets, scored independently of sectors. */
+  themes?: ThemeSnapshot[];
 }
 
 // --- Engine output types -----------------------------------------------------

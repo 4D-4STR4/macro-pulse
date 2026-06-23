@@ -52,6 +52,19 @@ export interface StockScore {
   };
 }
 
+export interface ThemeRead {
+  id: string;
+  name: string;
+  heatScore: number;
+  heatRank: number;
+  totalThemes: number;
+  phase: WavePhase;
+  exitScore: number;
+  role: SectorRole;
+  roleLabel: string;
+  conviction: { score: number; direction: SignalDirection };
+}
+
 export interface SectorContext {
   id: string;
   name: string;
@@ -84,6 +97,9 @@ export interface TickerMap {
   sector?: SectorContext;
   stock?: StockScore;
   stockDataAvailable: boolean;
+
+  /** Cross-cutting themes this ticker rides, sorted by heat (may be empty). */
+  themes: ThemeRead[];
 
   combined: {
     headline: string;
@@ -197,7 +213,7 @@ export function computeStockScore(series: StockSeries, bench?: number[]): StockS
 
 // --- sector role (reuses the engine's already-reasoned analysis) -------------
 
-function sectorRole(sa: SectorAnalysis, analysis: MarketAnalysis): { role: SectorRole; reason: string } {
+export function unitRole(sa: SectorAnalysis, analysis: MarketAnalysis): { role: SectorRole; reason: string } {
   const inExiting =
     analysis.exiting.some((e) => e.sector.id === sa.sector.id) ||
     sa.phase === "distribution" ||
@@ -206,8 +222,11 @@ function sectorRole(sa: SectorAnalysis, analysis: MarketAnalysis): { role: Secto
   const inNext =
     analysis.nextWave.some((n) => n.sector.id === sa.sector.id) ||
     (sa.phase === "emerging" && sa.inflowScore >= 58);
+  // Leadership by rank OR by absolute heat — so a genuinely hot unit isn't
+  // mislabeled "neutral" just because the universe is large (15 themes vs 11 sectors).
   const isLeader =
-    sa.heatRank <= 3 && (sa.phase === "momentum" || sa.phase === "climax" || sa.phase === "emerging");
+    (sa.heatRank <= 3 || sa.heatScore >= 66) &&
+    (sa.phase === "momentum" || sa.phase === "climax" || sa.phase === "emerging");
 
   // Precedence: risk first (avoid), then opportunity (rotate-in), then leadership.
   if (inExiting) {
@@ -234,7 +253,7 @@ function sectorRole(sa: SectorAnalysis, analysis: MarketAnalysis): { role: Secto
   };
 }
 
-const ROLE_LABEL: Record<SectorRole, string> = {
+export const ROLE_LABEL: Record<SectorRole, string> = {
   leader: "Hot now",
   "rotate-in": "Rotate in",
   avoid: "Avoid / rotate out",
@@ -279,10 +298,14 @@ export function mapTicker(
   rawSymbol: string,
   analysis: MarketAnalysis,
   coverage: number,
-  opts?: { stock?: StockScore },
+  opts?: { stock?: StockScore; themes?: ThemeRead[] },
 ): TickerMap {
   const classification = result.classification;
   const stock = opts?.stock;
+  const themes = opts?.themes ?? [];
+  // The single hottest theme the ticker rides that is itself a leader/rotation
+  // target (the "tailwind"), if any — used to reconcile theme vs sector.
+  const hotTheme = themes.find((t) => t.role === "leader" || t.role === "rotate-in") ?? null;
   const baseCaveats = [
     "Sector classification is GICS-based; verify for multi-segment or recently reclassified companies.",
     "Research only — not investment advice.",
@@ -308,6 +331,7 @@ export function mapTicker(
           : "We couldn't place this symbol in one of the 11 sectors, so we show its own price score without a sector role.",
         stock,
         stockDataAvailable: true,
+        themes,
         combined: {
           headline: `${result.name ?? symbol} — ${result.fund ? "fund/ETF" : "sector unclassified"}; showing the stock's own score.`,
           reasoning: [
@@ -337,6 +361,7 @@ export function mapTicker(
       roleLabel: "Unclassified",
       roleReason: "We don't have a confident sector classification for this symbol, so we won't guess.",
       stockDataAvailable: false,
+      themes,
       combined: {
         headline: `No confident classification for ${symbol}`,
         reasoning: [
@@ -356,7 +381,7 @@ export function mapTicker(
   }
 
   const sa = analysis.sectors.find((s) => s.sector.id === classification.sectorId)!;
-  const { role, reason } = sectorRole(sa, analysis);
+  const { role, reason } = unitRole(sa, analysis);
   const stockDataAvailable = !!stock;
 
   const sector: SectorContext = {
@@ -396,7 +421,10 @@ export function mapTicker(
 
   // --- headline + reasoning ---
   const strengthWord = strength ? `${cap(strength)} stock` : `${classification.name}`;
-  const headline =
+  // When the sector is soft but the ticker rides a hot theme, the theme is the
+  // real story — surface it in the headline so we don't mislead with the sector.
+  const sectorSoft = role === "avoid" || role === "neutral";
+  let headline =
     role === "avoid"
       ? `${strengthWord} in ${sa.sector.name} — a sector to rotate OUT of right now.`
       : role === "rotate-in"
@@ -404,6 +432,9 @@ export function mapTicker(
         : role === "leader"
           ? `${strengthWord} in ${sa.sector.name} — a current market leader.`
           : `${strengthWord} in ${sa.sector.name} — a neutral sector right now.`;
+  if (hotTheme && sectorSoft) {
+    headline = `${strengthWord} in ${sa.sector.name} (sector ${role === "avoid" ? "soft" : "neutral"}) — but rides the hot ${hotTheme.name} theme.`;
+  }
 
   const reasoning: string[] = [];
   reasoning.push(
@@ -417,6 +448,17 @@ export function mapTicker(
     reasoning.push(
       "Stock: individual price data wasn't available, so this is sector context only — not a stock-specific score. Enable live data (MARKET_DATA_PROVIDER=stooq) to score the stock itself.",
     );
+  }
+  if (themes.length) {
+    const top = themes.slice(0, 3).map((t) => `${t.name} (${t.roleLabel.toLowerCase()}, heat ${t.heatScore})`).join("; ");
+    reasoning.push(`Themes: ${classification.symbol} rides ${top}.`);
+    if (hotTheme && sectorSoft) {
+      reasoning.push(
+        `Theme vs sector: the GICS sector is ${role === "avoid" ? "rotating out" : "mid-pack"}, but the narrative actually driving ${classification.symbol} — ${hotTheme.name} — is ${PHASE_WORD[hotTheme.phase]} (heat ${hotTheme.heatScore}, #${hotTheme.heatRank} of ${hotTheme.totalThemes}). Weigh the theme over the coarse sector here.`,
+      );
+    } else if (hotTheme) {
+      reasoning.push(`Theme tailwind: ${hotTheme.name} is ${PHASE_WORD[hotTheme.phase]} — a real wind at this name's back.`);
+    }
   }
   reasoning.push(alignmentNote(role, strength));
 
@@ -460,6 +502,7 @@ export function mapTicker(
     sector,
     stock,
     stockDataAvailable,
+    themes,
     combined: { headline, reasoning, confidence, confidenceLabel },
     caveats,
     dataSource: analysis.source,
