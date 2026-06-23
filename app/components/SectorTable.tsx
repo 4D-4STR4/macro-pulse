@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { SectorAnalysis } from "@/lib/types";
 import { PhaseBadge, ConvictionBadge } from "./primitives";
 import { WaveLifecycle } from "./WaveLifecycle";
+import { StarToggle } from "./watchlist/StarToggle";
 import { heatColor, exitColor, fmtPct } from "@/lib/ui";
 
 type SortKey = "heat" | "conviction" | "exit" | "inflow" | "ret1w" | "ret1m" | "ret3m" | "rs1m";
@@ -45,6 +47,7 @@ export function SectorTable({ sectors }: { sectors: SectorAnalysis[] }) {
         <table className="w-full min-w-[760px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-white/10 text-left">
+              <th className="py-2 pr-2 font-normal text-white/40" aria-label="Watch" />
               <th className="py-2 pr-3 font-normal text-white/40">Sector</th>
               <th className="py-2 pr-3 font-normal text-white/40">Phase</th>
               {COLS.map((c) => (
@@ -66,8 +69,16 @@ export function SectorTable({ sectors }: { sectors: SectorAnalysis[] }) {
           <tbody>
             {rows.map((a) => (
               <tr key={a.sector.id} className="border-b border-white/5 hover:bg-white/[0.03]">
+                <td className="py-2.5 pr-2">
+                  <StarToggle sectorId={a.sector.id} />
+                </td>
                 <td className="py-2.5 pr-3">
-                  <div className="font-medium text-white/90">{a.sector.name}</div>
+                  <Link
+                    href={`/sectors/${a.sector.id}`}
+                    className="font-medium text-white/90 transition-colors hover:text-sky-300"
+                  >
+                    {a.sector.name}
+                  </Link>
                   <div className="metric text-[10px] text-white/35">{a.sector.etf}</div>
                 </td>
                 <td className="py-2.5 pr-3">

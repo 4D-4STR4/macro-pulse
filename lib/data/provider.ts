@@ -1,6 +1,7 @@
 import type { MarketSnapshot } from "@/lib/types";
 import { loadSnapshot } from "./snapshotProvider";
 import { fetchLunarCrush } from "./lunarcrushProvider";
+import { fetchStooq } from "./stooqProvider";
 
 /**
  * A data provider returns a normalized MarketSnapshot. Swapping providers never
@@ -13,15 +14,26 @@ export interface MarketDataProvider {
 
 /**
  * Provider selection:
- *   - MARKET_DATA_PROVIDER env forces a choice ("snapshot" | "lunarcrush")
+ *   - MARKET_DATA_PROVIDER env forces a choice ("snapshot" | "lunarcrush" | "stooq")
  *   - otherwise: LunarCrush if an API key is present, else the bundled snapshot.
  *
  * The bundled snapshot means the app is fully functional with zero config; the
  * moment a LUNARCRUSH_API_KEY is added it goes live with no code changes.
+ *
+ * Stooq is a zero-key LIVE-PRICE option but is opt-in only (MARKET_DATA_PROVIDER
+ * =stooq): it requires network access, so it is never the silent default —
+ * sandbox/offline runs must keep working on the bundled snapshot.
  */
 export function selectProvider(): MarketDataProvider {
   const forced = process.env.MARKET_DATA_PROVIDER?.toLowerCase();
   const hasKey = !!process.env.LUNARCRUSH_API_KEY;
+
+  if (forced === "stooq") {
+    return {
+      name: "stooq",
+      getMarket: () => fetchStooq(),
+    };
+  }
 
   if (forced === "lunarcrush" || (forced !== "snapshot" && hasKey)) {
     return {

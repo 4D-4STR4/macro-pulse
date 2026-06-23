@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { WatchlistProvider } from "@/app/components/watchlist/WatchlistProvider";
 
 export const metadata: Metadata = {
   title: "MacroPulse — Sector Wave & Rotation Intelligence",
@@ -10,7 +11,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <WatchlistProvider>{children}</WatchlistProvider>
+      </body>
     </html>
   );
 }

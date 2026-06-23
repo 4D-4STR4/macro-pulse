@@ -138,6 +138,18 @@ GET /api/market   →  full MarketAnalysis (heat-ranked sectors, phases,
 
 ---
 
+## Deploy
+
+Get it online (and on your phone) in a couple of minutes — full guide in
+**[DEPLOY.md](DEPLOY.md)**.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2F4D-4STR4%2Fmacro-pulse)
+
+It deploys with zero config on the bundled snapshot; set `MARKET_DATA_PROVIDER=stooq`
+for free live prices, or `LUNARCRUSH_API_KEY` for full live social data.
+
+---
+
 ## Project structure
 
 ```

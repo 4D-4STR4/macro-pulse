@@ -5,7 +5,14 @@ import { HottestWave } from "./components/HottestWave";
 import { RotationMap } from "./components/RotationMap";
 import { Playbook } from "./components/Playbook";
 import { SectorTable } from "./components/SectorTable";
+import { WatchlistPanel } from "./components/watchlist/WatchlistPanel";
 import { CYCLE_META } from "@/lib/ui";
+
+const SOURCE_LABEL: Record<string, string> = {
+  lunarcrush: "● live · LunarCrush",
+  stooq: "● live · prices",
+  snapshot: "○ snapshot",
+};
 
 // Re-run the engine on each request; the data layer manages its own caching.
 export const dynamic = "force-dynamic";
@@ -44,7 +51,7 @@ export default async function Home() {
             {analysis.cycle.label} · {analysis.cycle.confidence}%
           </span>
           <span className="metric text-[11px] text-white/40">
-            {analysis.source === "lunarcrush" ? "● live · LunarCrush" : "○ snapshot"} ·{" "}
+            {SOURCE_LABEL[analysis.source] ?? "○ snapshot"} ·{" "}
             {asOf.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
           </span>
         </div>
@@ -58,6 +65,7 @@ export default async function Home() {
 
       <div className="space-y-6">
         <DailyPulse analysis={analysis} />
+        <WatchlistPanel sectors={analysis.sectors} />
         <HottestWave a={analysis.hottest} />
         <RotationMap analysis={analysis} />
         <Playbook nextWave={analysis.nextWave} exiting={analysis.exiting} />

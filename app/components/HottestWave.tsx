@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { SectorAnalysis } from "@/lib/types";
 import { Gauge, ScoreBar, Sparkline, PhaseBadge, Delta, ConvictionBadge, ConvictionFactors } from "./primitives";
 import { WaveLifecycle } from "./WaveLifecycle";
@@ -33,8 +34,14 @@ export function HottestWave({ a }: { a: SectorAnalysis }) {
                 </span>
               </div>
               <p className="mt-1 max-w-[22ch] text-xs leading-snug text-white/45">{s.description}</p>
-              <div className="mt-2">
+              <div className="mt-2 flex items-center gap-2">
                 <PhaseBadge phase={a.phase} confidence={a.phaseConfidence} />
+                <Link
+                  href={`/sectors/${s.id}`}
+                  className="text-xs text-sky-400/80 transition-colors hover:text-sky-300"
+                >
+                  Deep dive →
+                </Link>
               </div>
             </div>
           </div>

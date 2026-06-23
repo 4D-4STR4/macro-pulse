@@ -61,7 +61,7 @@ export interface MarketSnapshot {
   /** Benchmark daily closes aligned to the same date grid as sector history.
    *  Enables recomputing relative strength "as of" an earlier day for diffs. */
   benchmarkHistory?: number[];
-  source: "snapshot" | "lunarcrush";
+  source: "snapshot" | "lunarcrush" | "stooq";
   note?: string;
   sectors: SectorSnapshot[];
 }
