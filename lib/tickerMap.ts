@@ -69,18 +69,14 @@ function readTickerThemes(symbol: string, themeMA: MarketAnalysis | null): Theme
   return reads.sort((a, b) => b.heatScore - a.heatScore);
 }
 
-/** Stooq uses dashes for class shares (BRK.B → brk-b). */
-function toStooqTicker(symbol: string): string {
-  return symbol.replace(/\./g, "-");
-}
 
 /** Best-effort live stock score from Stooq (stock + SPY for relative strength). */
 async function tryStockScore(symbol: string): Promise<StockScore | undefined> {
   try {
     const benchmark = process.env.MARKET_BENCHMARK || "SPY";
     const [rows, benchRows] = await Promise.all([
-      fetchDailySeries(toStooqTicker(symbol)),
-      fetchDailySeries(toStooqTicker(benchmark)).catch(() => null),
+      fetchDailySeries(symbol),
+      fetchDailySeries(benchmark).catch(() => null),
     ]);
     if (!rows || rows.length < 21) return undefined;
     return computeStockScore(

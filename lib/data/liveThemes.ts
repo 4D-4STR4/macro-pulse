@@ -23,8 +23,6 @@ const MIN_CONSTITUENTS = 3; // quorum to score a theme
 const pct = (a: number, b: number) => (b ? ((a - b) / b) * 100 : 0);
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
 const round = (x: number, dp = 2) => Math.round(x * 10 ** dp) / 10 ** dp;
-const toStooq = (s: string) => s.replace(/\./g, "-");
-
 const trailing = (p: number[], lb: number) =>
   p.length < 2 ? 0 : pct(p[p.length - 1], p[Math.max(0, p.length - 1 - lb)]);
 const momAt = (p: number[], i: number, n: number) => pct(p[i], p[Math.max(0, i - n)]);
@@ -43,7 +41,7 @@ export async function computeLiveThemes(market: MarketSnapshot): Promise<ThemeSn
   const fetched = await Promise.all(
     [...symbols].map(async (sym) => {
       try {
-        return [sym, await fetchDailySeries(toStooq(sym))] as const;
+        return [sym, await fetchDailySeries(sym)] as const;
       } catch {
         return [sym, null] as const;
       }

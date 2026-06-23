@@ -28,7 +28,7 @@ export function selectProvider(): MarketDataProvider {
   const forced = process.env.MARKET_DATA_PROVIDER?.toLowerCase();
   const hasKey = !!process.env.LUNARCRUSH_API_KEY;
 
-  if (forced === "stooq") {
+  if (forced === "stooq" || forced === "live") {
     return {
       name: "stooq",
       getMarket: () => fetchStooq(),

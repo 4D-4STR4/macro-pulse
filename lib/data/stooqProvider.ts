@@ -39,24 +39,76 @@ interface DailyRow {
 export type { DailyRow };
 
 /**
- * Fetch a single ticker's daily series from Stooq (live). Used by the Ticker
- * Map feature to score an individual stock. Throws if unreachable (the caller
- * degrades to sector-only context rather than fabricating stock numbers).
+ * Fetch a single ticker's daily series (live). Used by the Ticker Map and live
+ * theme baskets. Throws if unreachable (the caller degrades rather than faking).
  */
 export async function fetchDailySeries(ticker: string): Promise<DailyRow[]> {
   return fetchCsv(ticker);
 }
 
-/** Fetch one ticker's daily CSV from Stooq and parse into clean rows. */
-async function fetchCsv(ticker: string, attempt = 0): Promise<DailyRow[]> {
-  const url = `https://stooq.com/q/d/l/?s=${ticker.toLowerCase()}.us&i=d`;
-  // `next.revalidate` is a Next.js fetch extension; type it explicitly so this
-  // file also typechecks outside the Next build context.
+/**
+ * Fetch a ticker's recent daily bars, source-agnostic.
+ *
+ * Yahoo's chart endpoint is the PRIMARY source: it's keyless and (unlike Stooq)
+ * reachable from datacenter/serverless IPs like Vercel's. Stooq is kept as a
+ * fallback for environments where Yahoo is blocked. This is why stock scores and
+ * live sector/theme prices work on a deploy with no API key.
+ */
+async function fetchCsv(ticker: string): Promise<DailyRow[]> {
+  try {
+    return await fetchYahooChart(ticker);
+  } catch {
+    return await fetchStooqCsv(ticker);
+  }
+}
+
+/** Like fetchCsv but resolves to null instead of throwing — for per-sector resilience. */
+async function fetchCsvSafe(ticker: string): Promise<DailyRow[] | null> {
+  try {
+    return await fetchCsv(ticker);
+  } catch {
+    return null;
+  }
+}
+
+/** Yahoo Finance chart API → daily rows (keyless, datacenter-friendly). */
+async function fetchYahooChart(ticker: string): Promise<DailyRow[]> {
+  const sym = ticker.toUpperCase().replace(/\./g, "-"); // BRK.B -> BRK-B
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=6mo&interval=1d`;
   const init: RequestInit & { next?: { revalidate: number } } = {
-    // Daily bars move slowly; cache for 30 min to be a good citizen.
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; MacroPulse/1.0)" },
     next: { revalidate: 1800 },
-    // Fail fast so a slow/unreachable feed degrades quickly instead of hanging
-    // (important for on-demand ticker lookups).
+    signal: AbortSignal.timeout(4500),
+  };
+  const res = await fetch(url, init);
+  if (!res.ok) throw new Error(`Yahoo ${sym} -> ${res.status}`);
+  const json = (await res.json()) as {
+    chart?: { result?: Array<{ timestamp?: number[]; indicators?: { quote?: Array<{ close?: (number | null)[]; volume?: (number | null)[] }> } }> };
+  };
+  const r = json?.chart?.result?.[0];
+  const ts = r?.timestamp;
+  const q = r?.indicators?.quote?.[0];
+  if (!ts || !q?.close) throw new Error(`Yahoo ${sym} returned no series`);
+  const rows: DailyRow[] = [];
+  for (let i = 0; i < ts.length; i++) {
+    const close = q.close[i];
+    if (close == null || !Number.isFinite(close) || close <= 0) continue;
+    rows.push({
+      date: new Date(ts[i] * 1000).toISOString().slice(0, 10),
+      close,
+      volume: Number.isFinite(q.volume?.[i] ?? NaN) ? (q.volume![i] as number) : 0,
+    });
+  }
+  if (rows.length < 2) throw new Error(`Yahoo ${sym} returned no usable rows`);
+  return rows;
+}
+
+/** Stooq daily CSV → rows (fallback source). One quick retry on transient errors. */
+async function fetchStooqCsv(ticker: string, attempt = 0): Promise<DailyRow[]> {
+  const sym = ticker.toLowerCase().replace(/\./g, "-");
+  const url = `https://stooq.com/q/d/l/?s=${sym}.us&i=d`;
+  const init: RequestInit & { next?: { revalidate: number } } = {
+    next: { revalidate: 1800 },
     signal: AbortSignal.timeout(4500),
   };
   try {
@@ -68,21 +120,11 @@ async function fetchCsv(ticker: string, attempt = 0): Promise<DailyRow[]> {
     if (rows.length < 2) throw new Error(`Stooq ${ticker} returned no usable rows`);
     return rows;
   } catch (err) {
-    // Stooq occasionally 503s a single ticker; one quick retry smooths that over.
     if (attempt < 1) {
       await new Promise((r) => setTimeout(r, 400));
-      return fetchCsv(ticker, attempt + 1);
+      return fetchStooqCsv(ticker, attempt + 1);
     }
     throw err;
-  }
-}
-
-/** Like fetchCsv but resolves to null instead of throwing — for per-sector resilience. */
-async function fetchCsvSafe(ticker: string): Promise<DailyRow[] | null> {
-  try {
-    return await fetchCsv(ticker);
-  } catch {
-    return null;
   }
 }
 
@@ -283,8 +325,8 @@ export async function fetchStooq(): Promise<MarketSnapshot> {
     benchmarkHistory: benchPrices,
     source: "stooq",
     note:
-      "Live prices via Stooq. Social metrics are a price/volume-derived proxy " +
-      "until a LunarCrush API key is set.",
+      "Live prices (Yahoo, Stooq fallback). Social metrics are a price/volume-derived " +
+      "proxy until a LunarCrush API key is set.",
     sectors,
   };
 }
