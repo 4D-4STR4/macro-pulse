@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { MarketAnalysis } from "@/lib/types";
 import { unitRole } from "@/lib/engine/ticker";
 import { PhaseBadge, Sparkline, Delta } from "./primitives";
@@ -30,9 +31,10 @@ export function ThemesBoard({ analysis, live }: { analysis: MarketAnalysis; live
           const role = unitRole(t, analysis).role;
           const rm = ROLE_META[role] ?? ROLE_META.neutral;
           return (
-            <div
+            <Link
               key={t.sector.id}
-              className="flex items-center gap-3 rounded-xl border border-white/5 bg-black/20 p-3"
+              href={`/themes/${t.sector.id}`}
+              className="flex items-center gap-3 rounded-xl border border-white/5 bg-black/20 p-3 transition-colors hover:border-white/15 hover:bg-white/[0.04]"
             >
               <span className="metric w-5 shrink-0 text-center text-xs text-white/30">{i + 1}</span>
               <div className="min-w-0 flex-1">
@@ -68,7 +70,7 @@ export function ThemesBoard({ analysis, live }: { analysis: MarketAnalysis; live
                   {t.heatScore}
                 </span>
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>

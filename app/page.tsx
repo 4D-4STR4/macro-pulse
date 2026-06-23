@@ -8,7 +8,6 @@ import { ThemesBoard } from "./components/ThemesBoard";
 import { Playbook } from "./components/Playbook";
 import { SectorTable } from "./components/SectorTable";
 import { WatchlistPanel } from "./components/watchlist/WatchlistPanel";
-import { TickerSearch } from "./components/TickerSearch";
 import { CYCLE_META } from "@/lib/ui";
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -31,20 +30,11 @@ export default async function Home() {
       {/* Header */}
       <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <Logo />
-            <h1 className="text-2xl font-bold tracking-tight text-white">MacroPulse</h1>
-            <span className="chip border border-white/10 bg-white/5 text-white/50">
-              sector wave & rotation intel
-            </span>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Market Dashboard</h1>
           <p className="mt-1.5 max-w-2xl text-sm text-white/50">
             Read the tape, find the hottest wave, see where capital rotates next — and know when to
             hop off.
           </p>
-          <div className="mt-3">
-            <TickerSearch />
-          </div>
         </div>
         <div className="flex flex-col items-end gap-1.5 text-right">
           <span
@@ -141,17 +131,3 @@ function Methodology({ benchmark }: { benchmark: string }) {
   );
 }
 
-function Logo() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden>
-      <rect width="26" height="26" rx="7" fill="#0f1730" stroke="rgba(255,255,255,0.1)" />
-      <path
-        d="M4 15.5l4-6 3 4 3.5-7 3.5 9 4-3"
-        stroke="#22c55e"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}

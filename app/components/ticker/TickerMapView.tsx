@@ -190,7 +190,7 @@ function ThemesCard({ map }: { map: TickerMap }) {
         {map.themes.map((t) => {
           const rm = ROLE_META[t.role] ?? ROLE_META.neutral;
           return (
-            <div key={t.id} className="flex items-center justify-between rounded-lg border border-white/5 bg-black/20 p-3">
+            <Link key={t.id} href={`/themes/${t.id}`} className="flex items-center justify-between rounded-lg border border-white/5 bg-black/20 p-3 transition-colors hover:border-white/15 hover:bg-white/[0.04]">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="truncate text-sm font-medium text-white/90">{t.name}</span>
@@ -207,7 +207,7 @@ function ThemesCard({ map }: { map: TickerMap }) {
                 <span className="metric text-lg font-semibold" style={{ color: heatColor(t.heatScore) }}>{t.heatScore}</span>
                 <div className="label">heat</div>
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>
