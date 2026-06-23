@@ -4,6 +4,7 @@ import type {
   SectorSnapshot,
 } from "@/lib/types";
 import { SECTORS } from "./sectors";
+import { fetchTopicSocial, hasLunarKey } from "./lunarSocial";
 
 /**
  * Live PRICES via Stooq's free daily CSV endpoint — no API key, no CORS issue
@@ -55,13 +56,21 @@ export async function fetchDailySeries(ticker: string): Promise<DailyRow[]> {
  * live sector/theme prices work on a deploy with no API key.
  */
 async function fetchCsv(ticker: string): Promise<DailyRow[]> {
-  // FMP first when a key is present — it's reliable from datacenter/serverless
-  // IPs where keyless feeds (Yahoo chart, Stooq) are often blocked.
+  // Source chain, most-accurate/most-reliable-from-servers first. Keyed sources
+  // (Polygon, FMP) are tried when their key is present; keyless sources (Yahoo,
+  // Stooq) are the fallback. Each source throws on failure → next is tried.
+  if (process.env.POLYGON_API_KEY) {
+    try {
+      return await fetchPolygon(ticker);
+    } catch {
+      /* next */
+    }
+  }
   if (process.env.FMP_API_KEY) {
     try {
       return await fetchFmpPrices(ticker);
     } catch {
-      /* fall through to keyless sources */
+      /* next */
     }
   }
   try {
@@ -69,6 +78,31 @@ async function fetchCsv(ticker: string): Promise<DailyRow[]> {
   } catch {
     return await fetchStooqCsv(ticker);
   }
+}
+
+/** Polygon.io daily aggregates — exchange-grade prices, reliable from servers. */
+async function fetchPolygon(ticker: string): Promise<DailyRow[]> {
+  const sym = ticker.toUpperCase().replace(/\./g, ".");
+  const to = new Date();
+  const from = new Date(to.getTime() - 200 * 86400000);
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const url = `https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(sym)}/range/1/day/${fmt(from)}/${fmt(to)}?adjusted=true&sort=asc&limit=50000&apiKey=${process.env.POLYGON_API_KEY}`;
+  const init: RequestInit & { next?: { revalidate: number } } = {
+    next: { revalidate: 1800 },
+    signal: AbortSignal.timeout(6000),
+  };
+  const res = await fetch(url, init);
+  if (!res.ok) throw new Error(`Polygon ${sym} -> ${res.status}`);
+  const json = (await res.json()) as { results?: Array<{ t?: number; c?: number; v?: number }> };
+  const results = json?.results;
+  if (!results || results.length < 2) throw new Error(`Polygon ${sym} returned no series`);
+  const rows: DailyRow[] = [];
+  for (const r of results) {
+    if (r.c == null || !Number.isFinite(r.c) || r.c <= 0 || r.t == null) continue;
+    rows.push({ date: new Date(r.t).toISOString().slice(0, 10), close: r.c, volume: Number.isFinite(r.v ?? NaN) ? (r.v as number) : 0 });
+  }
+  if (rows.length < 2) throw new Error(`Polygon ${sym} returned no usable rows`);
+  return rows;
 }
 
 /** Financial Modeling Prep daily EOD prices (keyed, datacenter-friendly). */
@@ -345,6 +379,31 @@ export async function fetchStooq(): Promise<MarketSnapshot> {
     };
   });
 
+  // Overlay REAL social data from LunarCrush when a key is present (best-effort;
+  // any failure leaves the price/volume proxy in place).
+  let socialNote = "Social metrics are a price/volume-derived proxy (set LUNARCRUSH_API_KEY for real social).";
+  if (hasLunarKey()) {
+    const overlays = await Promise.all(sectors.map((s) => fetchTopicSocial(`$${s.etf.toLowerCase()}`)));
+    let applied = 0;
+    overlays.forEach((ov, i) => {
+      if (!ov) return;
+      const s = sectors[i];
+      s.socialDominance = ov.socialDominance;
+      s.sentiment = ov.sentiment;
+      s.galaxyScore = ov.galaxyScore;
+      s.interactions = ov.interactions;
+      if (s.history.length) {
+        const h = s.history[s.history.length - 1];
+        h.socialDominance = ov.socialDominance;
+        h.sentiment = ov.sentiment;
+        h.galaxyScore = ov.galaxyScore;
+        h.interactions = ov.interactions;
+      }
+      applied++;
+    });
+    if (applied) socialNote = `Real social via LunarCrush (${applied}/${sectors.length} sectors).`;
+  }
+
   // altRank: rank by galaxy score (1 = best), mirroring the snapshot generator.
   [...sectors]
     .sort((a, b) => b.galaxyScore - a.galaxyScore)
@@ -357,9 +416,7 @@ export async function fetchStooq(): Promise<MarketSnapshot> {
     benchmarkRet3m: bRet3m,
     benchmarkHistory: benchPrices,
     source: "stooq",
-    note:
-      "Live prices (Yahoo, Stooq fallback). Social metrics are a price/volume-derived " +
-      "proxy until a LunarCrush API key is set.",
+    note: `Live prices (Polygon/FMP/Yahoo). ${socialNote}`,
     sectors,
   };
 }

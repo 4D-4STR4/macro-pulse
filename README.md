@@ -106,15 +106,32 @@ npm run generate:snapshot   # rewrites data/snapshot.json
 It exists so the app runs end-to-end out of the box, and is replaced wholesale
 the moment live data is wired in.
 
-### Going live with LunarCrush
-1. Get a key: https://lunarcrush.com/developers/api
-2. `cp .env.example .env` and set `LUNARCRUSH_API_KEY=...`
-3. Restart. The header badge flips from `○ snapshot` to `● live · LunarCrush`.
+### Going live — the data stack
 
-The live provider tracks each sector through its SPDR sector ETF (`$xlk`, `$xle`,
-…) as a first-class LunarCrush topic, pulling a snapshot + ~3 months of daily
-history and normalizing it into the same shape the engine already consumes. (Note:
-LunarCrush stock/social endpoints require a paid LunarCrush plan.)
+The data layer is a graceful fallback chain, so any subset of keys works. Set
+them in `.env` (local) or your host's environment variables.
+
+**Prices** (sectors, themes, stock scores) — first available wins:
+
+| Source | Key | Notes |
+|---|---|---|
+| Polygon.io | `POLYGON_API_KEY` | Exchange-grade, most accurate. **Best.** |
+| FMP | `FMP_API_KEY` | Reliable from servers, free tier. Also does classification. |
+| Yahoo | *(keyless)* | Works locally; often blocked on serverless/datacenter IPs. |
+| Stooq | *(keyless)* | Last-resort fallback. |
+
+**Social / attention** (sentiment, social dominance, conviction, exit timing):
+
+| Source | Key | Notes |
+|---|---|---|
+| LunarCrush | `LUNARCRUSH_API_KEY` | **Real** social signal. Without it, social is a price/volume proxy. The biggest accuracy upgrade. |
+
+Then set `MARKET_DATA_PROVIDER=live` to turn on live sectors + theme baskets.
+(Even without it, individual ticker **stock scores** are computed live.)
+
+**Background refresh:** `GET /api/cron/refresh` warms the cache (each price fetch
+is cached ~30 min). A daily Vercel Cron is configured in `vercel.json`; for more
+frequent refresh use a Vercel Pro cron or a free external pinger.
 
 ---
 
