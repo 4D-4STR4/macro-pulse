@@ -141,6 +141,7 @@ export async function fetchLunarCrush(): Promise<MarketSnapshot> {
     benchmark,
     benchmarkRet1m: bRet1m,
     benchmarkRet3m: bRet3m,
+    benchmarkHistory: bench,
     source: "lunarcrush",
     sectors: results,
   };

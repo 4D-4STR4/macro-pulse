@@ -78,6 +78,30 @@ export function exitColor(score: number): string {
   return "#38bdf8";
 }
 
+/** Color for conviction by direction + strength. */
+export function convictionColor(direction: "bullish" | "bearish" | "neutral", score: number): string {
+  if (direction === "neutral" || score < 25) return "#71717a";
+  if (direction === "bullish") return score >= 60 ? "#22c55e" : "#4ade80";
+  return score >= 60 ? "#ef4444" : "#f87171";
+}
+
+export const DIRECTION_META: Record<
+  "bullish" | "bearish" | "neutral",
+  { label: string; arrow: string; color: string }
+> = {
+  bullish: { label: "Bullish", arrow: "▲", color: "#22c55e" },
+  bearish: { label: "Bearish", arrow: "▼", color: "#ef4444" },
+  neutral: { label: "Neutral", arrow: "▪", color: "#a1a1aa" },
+};
+
+export const POSTURE_COLOR: Record<string, string> = {
+  "Risk-on": "#22c55e",
+  "Leaning risk-on": "#4ade80",
+  Mixed: "#f59e0b",
+  "Leaning risk-off": "#fb923c",
+  "Risk-off": "#ef4444",
+};
+
 export const fmtPct = (x: number, dp = 1): string =>
   `${x >= 0 ? "+" : ""}${x.toFixed(dp)}%`;
 

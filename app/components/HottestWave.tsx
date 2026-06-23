@@ -1,5 +1,5 @@
 import type { SectorAnalysis } from "@/lib/types";
-import { Gauge, ScoreBar, Sparkline, PhaseBadge, Delta } from "./primitives";
+import { Gauge, ScoreBar, Sparkline, PhaseBadge, Delta, ConvictionBadge, ConvictionFactors } from "./primitives";
 import { WaveLifecycle } from "./WaveLifecycle";
 import { PHASE_META, heatColor, exitColor } from "@/lib/ui";
 
@@ -48,6 +48,13 @@ export function HottestWave({ a }: { a: SectorAnalysis }) {
           <div className="flex items-center justify-between">
             <span className="label">Why it&apos;s leading</span>
             <span className="metric text-xs text-white/50">#{a.heatRank} of all sectors</span>
+          </div>
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2">
+            <div className="flex items-center gap-2">
+              <span className="label">Conviction</span>
+              <ConvictionBadge c={a.conviction} showAgreement />
+            </div>
+            <ConvictionFactors c={a.conviction} />
           </div>
           {a.heatComponents.map((c) => (
             <ScoreBar

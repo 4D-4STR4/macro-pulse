@@ -1,5 +1,6 @@
 import { getMarketData } from "@/lib/data/provider";
-import { analyzeMarket } from "@/lib/engine";
+import { analyzeDaily } from "@/lib/engine";
+import { DailyPulse } from "./components/DailyPulse";
 import { HottestWave } from "./components/HottestWave";
 import { RotationMap } from "./components/RotationMap";
 import { Playbook } from "./components/Playbook";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const market = await getMarketData();
-  const analysis = analyzeMarket(market);
+  const analysis = analyzeDaily(market);
   const asOf = new Date(analysis.asOf);
 
   return (
@@ -56,6 +57,7 @@ export default async function Home() {
       )}
 
       <div className="space-y-6">
+        <DailyPulse analysis={analysis} />
         <HottestWave a={analysis.hottest} />
         <RotationMap analysis={analysis} />
         <Playbook nextWave={analysis.nextWave} exiting={analysis.exiting} />

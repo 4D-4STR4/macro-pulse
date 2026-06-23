@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import type { SectorAnalysis } from "@/lib/types";
-import { PhaseBadge } from "./primitives";
+import { PhaseBadge, ConvictionBadge } from "./primitives";
 import { WaveLifecycle } from "./WaveLifecycle";
 import { heatColor, exitColor, fmtPct } from "@/lib/ui";
 
-type SortKey = "heat" | "exit" | "inflow" | "ret1w" | "ret1m" | "ret3m" | "rs1m";
+type SortKey = "heat" | "conviction" | "exit" | "inflow" | "ret1w" | "ret1m" | "ret3m" | "rs1m";
 
 const COLS: { key: SortKey; label: string; get: (a: SectorAnalysis) => number }[] = [
   { key: "heat", label: "Heat", get: (a) => a.heatScore },
+  { key: "conviction", label: "Conv.", get: (a) => a.conviction.score * (a.conviction.direction === "bearish" ? -1 : 1) },
   { key: "exit", label: "Exit", get: (a) => a.exitScore },
   { key: "inflow", label: "Inflow", get: (a) => a.inflowScore },
   { key: "ret1w", label: "1W", get: (a) => a.sector.ret1w },
@@ -74,6 +75,11 @@ export function SectorTable({ sectors }: { sectors: SectorAnalysis[] }) {
                 </td>
                 <td className="py-2.5 pr-3 text-right">
                   <Pill value={a.heatScore} color={heatColor(a.heatScore)} />
+                </td>
+                <td className="py-2.5 pr-3 text-right">
+                  <span className="inline-flex justify-end">
+                    <ConvictionBadge c={a.conviction} />
+                  </span>
                 </td>
                 <td className="py-2.5 pr-3 text-right">
                   <Pill value={a.exitScore} color={exitColor(a.exitScore)} />

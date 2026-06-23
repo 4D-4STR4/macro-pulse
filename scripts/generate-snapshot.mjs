@@ -282,6 +282,7 @@ function main() {
     benchmark: "SPY",
     benchmarkRet1m: round(bRet1m, 2),
     benchmarkRet3m: round(bRet3m, 2),
+    benchmarkHistory: bench.map((p) => round(p, 2)),
     source: "snapshot",
     note:
       "Real-context seed snapshot (late June 2026). Synthetic-but-faithful sector paths; " +

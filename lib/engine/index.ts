@@ -9,6 +9,11 @@ import { heatComponents } from "./heat";
 import { classifyPhase } from "./phase";
 import { exitSignal } from "./exit";
 import { inferCycle, cycleDestinations } from "./cycle";
+import { sectorConviction } from "./conviction";
+import { marketPosture } from "./posture";
+import { marketAsOf } from "./asOf";
+import { detectChanges } from "./diff";
+import { buildBriefing } from "./briefing";
 
 /**
  * The MacroPulse analysis engine entry point.
@@ -41,6 +46,7 @@ export function analyzeMarket(market: MarketSnapshot): MarketAnalysis {
         divergence: round(trends.divergence, 3),
         socialPeakRolloff: round(trends.socialPeakRolloff, 3),
       },
+      conviction: sectorConviction(sector, market),
       verdict: "",
       inflowScore: 0,
       heatRank: 0,
@@ -95,6 +101,7 @@ export function analyzeMarket(market: MarketSnapshot): MarketAnalysis {
     .sort((a, b) => b.exitScore - a.exitScore);
 
   const rotations = buildRotationEdges(sectors, hottest, nextWave, cycle, market);
+  const posture = marketPosture(sectors);
 
   return {
     asOf: market.asOf,
@@ -107,7 +114,21 @@ export function analyzeMarket(market: MarketSnapshot): MarketAnalysis {
     exiting,
     cycle,
     rotations,
+    posture,
   };
+}
+
+/**
+ * The daily entry point: analyzes today, reconstructs the prior read from
+ * history, diffs them into ranked signal changes, and writes the briefing.
+ * This is what the dashboard and /api/market consume.
+ */
+export function analyzeDaily(market: MarketSnapshot, compareDaysAgo = 1): MarketAnalysis {
+  const today = analyzeMarket(market);
+  const prior = analyzeMarket(marketAsOf(market, compareDaysAgo));
+  const changes = detectChanges(prior, today);
+  const briefing = buildBriefing(today, changes);
+  return { ...today, comparedTo: prior.asOf, changes, briefing };
 }
 
 function verdictFor(a: SectorAnalysis): string {

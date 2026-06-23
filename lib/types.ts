@@ -58,6 +58,9 @@ export interface MarketSnapshot {
   benchmark: string; // 'SPY'
   benchmarkRet1m: number;
   benchmarkRet3m: number;
+  /** Benchmark daily closes aligned to the same date grid as sector history.
+   *  Enables recomputing relative strength "as of" an earlier day for diffs. */
+  benchmarkHistory?: number[];
   source: "snapshot" | "lunarcrush";
   note?: string;
   sectors: SectorSnapshot[];
@@ -114,6 +117,9 @@ export interface SectorAnalysis {
   /** 0-100 — attractiveness as a destination for rotating capital. */
   inflowScore: number;
 
+  /** How strongly the independent signals agree — the trust dial. */
+  conviction: ConvictionRead;
+
   /** Internal trend readings, surfaced for charts / transparency. */
   trends: {
     priceSlope: number; // normalized recent price slope
@@ -162,4 +168,74 @@ export interface MarketAnalysis {
 
   cycle: CycleRead;
   rotations: RotationEdge[]; // directional flow edges for the rotation map
+
+  /** Overall risk posture of the tape. */
+  posture: MarketPosture;
+
+  // --- daily layer (present when built via analyzeDaily) ---
+  /** ISO timestamp of the prior read this was compared against. */
+  comparedTo?: string;
+  /** What changed vs the prior read, ranked by importance. */
+  changes?: SignalChange[];
+  /** The auto-written daily briefing. */
+  briefing?: DailyBriefing;
+}
+
+// --- Conviction (signal amplification) --------------------------------------
+
+export type SignalDirection = "bullish" | "bearish" | "neutral";
+
+export interface ConvictionFactor {
+  key: string;
+  label: string;
+  /** Directional reading in [-1, +1] (bullish positive). */
+  dir: number;
+}
+
+export interface ConvictionRead {
+  /** 0-100 magnitude — high only when factors are strong AND agree. */
+  score: number;
+  direction: SignalDirection;
+  /** % of factors aligned with the dominant direction. */
+  agreement: number;
+  factors: ConvictionFactor[];
+  /** Plain-language read, e.g. "5/5 signals bullish — high conviction". */
+  summary: string;
+}
+
+export interface MarketPosture {
+  label: "Risk-on" | "Leaning risk-on" | "Mixed" | "Leaning risk-off" | "Risk-off";
+  /** -100 (defensive) .. +100 (aggressive). */
+  score: number;
+  detail: string;
+}
+
+// --- Signal-change detection (the daily hook) -------------------------------
+
+export type ChangeType =
+  | "phase"
+  | "exit-trigger"
+  | "exit-cleared"
+  | "heat-rank"
+  | "conviction"
+  | "next-wave-in"
+  | "new-trigger";
+
+export interface SignalChange {
+  id: string; // sector id
+  sector: string; // display name
+  etf: string;
+  type: ChangeType;
+  direction: SignalDirection;
+  /** 0-100 importance, for ranking the feed. */
+  severity: number;
+  headline: string;
+  detail: string;
+}
+
+export interface DailyBriefing {
+  date: string;
+  headline: string;
+  narrative: string;
+  keyMoves: SignalChange[];
 }

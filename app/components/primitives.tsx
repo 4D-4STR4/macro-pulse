@@ -1,5 +1,5 @@
-import type { WavePhase } from "@/lib/types";
-import { PHASE_META } from "@/lib/ui";
+import type { ConvictionRead, WavePhase } from "@/lib/types";
+import { PHASE_META, DIRECTION_META, convictionColor } from "@/lib/ui";
 
 /** Radial 0-100 gauge with a value in the center. */
 export function Gauge({
@@ -154,6 +154,40 @@ export function PhaseBadge({ phase, confidence }: { phase: WavePhase; confidence
       {m.label}
       {confidence != null && <span className="opacity-60">· {confidence}%</span>}
     </span>
+  );
+}
+
+/** Compact conviction badge: direction arrow + score, colored by trust. */
+export function ConvictionBadge({ c, showAgreement = false }: { c: ConvictionRead; showAgreement?: boolean }) {
+  const color = convictionColor(c.direction, c.score);
+  const d = DIRECTION_META[c.direction];
+  return (
+    <span
+      className="chip border"
+      style={{ background: `${color}14`, borderColor: `${color}44`, color }}
+      title={c.summary}
+    >
+      <span>{d.arrow}</span>
+      <span className="metric">{c.score}</span>
+      {showAgreement && <span className="opacity-60">· {c.agreement}% aligned</span>}
+    </span>
+  );
+}
+
+/** Five-dot conviction strip showing each factor's direction. */
+export function ConvictionFactors({ c }: { c: ConvictionRead }) {
+  return (
+    <div className="flex items-center gap-1" title={c.summary}>
+      {c.factors.map((f) => {
+        const col = f.dir > 0.08 ? "#22c55e" : f.dir < -0.08 ? "#ef4444" : "#52525b";
+        const h = 4 + Math.round(Math.abs(f.dir) * 10);
+        return (
+          <span key={f.key} className="flex h-3.5 w-1.5 items-end" title={`${f.label}: ${f.dir}`}>
+            <span className="w-full rounded-sm" style={{ height: `${h}px`, background: col }} />
+          </span>
+        );
+      })}
+    </div>
   );
 }
 

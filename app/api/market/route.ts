@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getMarketData } from "@/lib/data/provider";
-import { analyzeMarket } from "@/lib/engine";
+import { analyzeDaily } from "@/lib/engine";
 
 // Always evaluate fresh; the data layer handles its own caching.
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const market = await getMarketData();
-    const analysis = analyzeMarket(market);
+    const analysis = analyzeDaily(market);
     return NextResponse.json(analysis);
   } catch (err) {
     return NextResponse.json(
