@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/", label: "Dashboard", match: (p: string) => p === "/" },
   { href: "/themes", label: "Themes", match: (p: string) => p.startsWith("/themes") },
   { href: "/sectors", label: "Sectors", match: (p: string) => p.startsWith("/sectors") },
+  { href: "/signals", label: "Signals", match: (p: string) => p.startsWith("/signals") },
 ];
 
 /** Global top navigation — brand, section links, and the ticker search. */
