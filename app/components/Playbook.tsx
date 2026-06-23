@@ -1,3 +1,4 @@
+import { TrendingUp, LogOut } from "lucide-react";
 import type { SectorAnalysis } from "@/lib/types";
 import { PhaseBadge, Sparkline, Delta } from "./primitives";
 import { WaveLifecycle } from "./WaveLifecycle";
@@ -15,7 +16,12 @@ export function Playbook({
     <div className="grid gap-5 lg:grid-cols-2">
       <section className="card p-6">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-white">Next Wave — rotate in</h2>
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+            <span className="icon-tile h-7 w-7" style={{ background: "#22c55e1a", borderColor: "#22c55e44", color: "#22c55e" }}>
+              <TrendingUp size={15} strokeWidth={2.4} />
+            </span>
+            Next Wave — rotate in
+          </h2>
           <p className="text-xs text-white/45">
             Heating up but not yet exhausted — best destinations for fresh capital.
           </p>
@@ -29,7 +35,12 @@ export function Playbook({
 
       <section className="card p-6">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-white">Exit Watch — hop off</h2>
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+            <span className="icon-tile h-7 w-7" style={{ background: "#ef44441a", borderColor: "#ef444444", color: "#ef4444" }}>
+              <LogOut size={15} strokeWidth={2.4} />
+            </span>
+            Exit Watch — hop off
+          </h2>
           <p className="text-xs text-white/45">
             Waves flashing exhaustion. De-risk or stand aside.
           </p>

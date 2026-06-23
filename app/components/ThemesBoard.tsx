@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Flame } from "lucide-react";
 import type { MarketAnalysis } from "@/lib/types";
 import { unitRole } from "@/lib/engine/ticker";
 import { PhaseBadge, Sparkline, Delta } from "./primitives";
@@ -16,7 +17,12 @@ export function ThemesBoard({ analysis, live }: { analysis: MarketAnalysis; live
     <section className="card p-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold text-white">Hot Themes</h2>
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+            <span className="icon-tile h-7 w-7" style={{ background: "#f59e0b1a", borderColor: "#f59e0b44", color: "#f59e0b" }}>
+              <Flame size={15} strokeWidth={2.4} />
+            </span>
+            Hot Themes
+          </h2>
           <p className="text-xs text-white/45">
             Cross-cutting narratives ranked by heat — the wave a stock rides, independent of its sector.
           </p>

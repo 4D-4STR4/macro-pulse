@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Flame, LogOut, ArrowRight } from "lucide-react";
 import type { SectorAnalysis } from "@/lib/types";
-import { Gauge, ScoreBar, Sparkline, PhaseBadge, Delta, ConvictionBadge, ConvictionFactors } from "./primitives";
+import { ScoreBar, Sparkline, PhaseBadge, Delta, ConvictionBadge, ConvictionFactors } from "./primitives";
+import { AnimatedGauge } from "./dashboard/AnimatedGauge";
 import { WaveLifecycle } from "./WaveLifecycle";
 import { PHASE_META, heatColor, exitColor } from "@/lib/ui";
 
@@ -22,10 +24,13 @@ export function HottestWave({ a }: { a: SectorAnalysis }) {
         {/* Heat gauge + identity */}
         <div className="flex flex-col items-center justify-center gap-3 lg:items-start">
           <div className="flex items-center gap-2">
+            <span className="icon-tile h-7 w-7" style={{ background: "#f59e0b1a", borderColor: "#f59e0b44", color: "#f59e0b" }}>
+              <Flame size={15} strokeWidth={2.4} />
+            </span>
             <span className="label">The current wave</span>
           </div>
           <div className="flex items-center gap-4">
-            <Gauge value={a.heatScore} color={heatColor(a.heatScore)} label="Heat" sub="0–100" />
+            <AnimatedGauge value={a.heatScore} color={heatColor(a.heatScore)} label="Heat" sub="0–100" />
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-2xl font-semibold text-white">{s.name}</h2>
@@ -38,9 +43,10 @@ export function HottestWave({ a }: { a: SectorAnalysis }) {
                 <PhaseBadge phase={a.phase} confidence={a.phaseConfidence} />
                 <Link
                   href={`/sectors/${s.id}`}
-                  className="text-xs text-sky-400/80 transition-colors hover:text-sky-300"
+                  className="group inline-flex items-center gap-1 text-xs text-sky-400/80 transition-colors hover:text-sky-300"
                 >
-                  Deep dive →
+                  Deep dive
+                  <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
                 </Link>
               </div>
             </div>
@@ -94,7 +100,10 @@ export function HottestWave({ a }: { a: SectorAnalysis }) {
         {/* Exit signal */}
         <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
           <div className="flex items-center justify-between">
-            <span className="label">Hop-off signal</span>
+            <span className="flex items-center gap-1.5 label">
+              <LogOut size={13} strokeWidth={2.4} style={{ color: exitColor(a.exitScore) }} />
+              Hop-off signal
+            </span>
             <span className="metric text-xs" style={{ color: exitColor(a.exitScore) }}>
               {a.exitScore}/100
             </span>

@@ -1,3 +1,4 @@
+import { Shuffle } from "lucide-react";
 import type { MarketAnalysis } from "@/lib/types";
 import { CycleClock } from "./CycleClock";
 import { PHASE_META } from "@/lib/ui";
@@ -12,7 +13,12 @@ export function RotationMap({ analysis }: { analysis: MarketAnalysis }) {
     <section className="card p-6">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-white">Rotation Map</h2>
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+            <span className="icon-tile h-7 w-7" style={{ background: "#38bdf81a", borderColor: "#38bdf844", color: "#38bdf8" }}>
+              <Shuffle size={15} strokeWidth={2.4} />
+            </span>
+            Rotation Map
+          </h2>
           <p className="text-xs text-white/45">
             Predicted capital flow — out of exhausting waves, into the next ones.
           </p>
