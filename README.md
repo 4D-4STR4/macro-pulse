@@ -23,6 +23,7 @@ A single dashboard:
 - **Rotation Map** — predicted capital flow (out of exhausting waves, into the next ones), overlaid on an inferred business-cycle clock.
 - **Playbook** — two columns: *Next Wave — rotate in* and *Exit Watch — hop off*.
 - **All Sectors** — the full, sortable board (Heat / Exit / Inflow / returns / relative strength / lifecycle).
+- **Ticker Map** — type any ticker (`/ticker/NVDA`) to see its sector, that sector's rotation role (**Hot now / Rotate in / Avoid / Neutral**), the stock's *own* technical score (when live data is on), and a combined, confidence-weighted read. It refuses to guess a sector it doesn't know — signal, not noise.
 
 ---
 
@@ -132,8 +133,9 @@ Requires Node 18+.
 The whole analysis is also available as JSON for bots / external clients:
 
 ```
-GET /api/market   →  full MarketAnalysis (heat-ranked sectors, phases,
-                     exit signals, next wave, cycle read, rotation edges)
+GET /api/market          →  full MarketAnalysis (heat-ranked sectors, phases,
+                            exit signals, next wave, cycle read, rotation edges)
+GET /api/ticker/{symbol}  →  Ticker Map (sector + role, stock score, reasoned read)
 ```
 
 ---

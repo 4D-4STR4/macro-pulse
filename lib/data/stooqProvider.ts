@@ -36,6 +36,17 @@ interface DailyRow {
   volume: number;
 }
 
+export type { DailyRow };
+
+/**
+ * Fetch a single ticker's daily series from Stooq (live). Used by the Ticker
+ * Map feature to score an individual stock. Throws if unreachable (the caller
+ * degrades to sector-only context rather than fabricating stock numbers).
+ */
+export async function fetchDailySeries(ticker: string): Promise<DailyRow[]> {
+  return fetchCsv(ticker);
+}
+
 /** Fetch one ticker's daily CSV from Stooq and parse into clean rows. */
 async function fetchCsv(ticker: string, attempt = 0): Promise<DailyRow[]> {
   const url = `https://stooq.com/q/d/l/?s=${ticker.toLowerCase()}.us&i=d`;
@@ -44,6 +55,9 @@ async function fetchCsv(ticker: string, attempt = 0): Promise<DailyRow[]> {
   const init: RequestInit & { next?: { revalidate: number } } = {
     // Daily bars move slowly; cache for 30 min to be a good citizen.
     next: { revalidate: 1800 },
+    // Fail fast so a slow/unreachable feed degrades quickly instead of hanging
+    // (important for on-demand ticker lookups).
+    signal: AbortSignal.timeout(4500),
   };
   try {
     const res = await fetch(url, init);

@@ -6,6 +6,7 @@ import { RotationMap } from "./components/RotationMap";
 import { Playbook } from "./components/Playbook";
 import { SectorTable } from "./components/SectorTable";
 import { WatchlistPanel } from "./components/watchlist/WatchlistPanel";
+import { TickerSearch } from "./components/TickerSearch";
 import { CYCLE_META } from "@/lib/ui";
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -38,6 +39,9 @@ export default async function Home() {
             Read the tape, find the hottest wave, see where capital rotates next — and know when to
             hop off.
           </p>
+          <div className="mt-3">
+            <TickerSearch />
+          </div>
         </div>
         <div className="flex flex-col items-end gap-1.5 text-right">
           <span

@@ -102,6 +102,18 @@ export const POSTURE_COLOR: Record<string, string> = {
   "Risk-off": "#ef4444",
 };
 
+/** Ticker Map sector-role presentation. */
+export const ROLE_META: Record<
+  string,
+  { label: string; color: string; blurb: string }
+> = {
+  leader: { label: "Hot now", color: "#22c55e", blurb: "In a current market-leading sector." },
+  "rotate-in": { label: "Rotate in", color: "#38bdf8", blurb: "In an emerging rotation target — capital flowing in." },
+  avoid: { label: "Avoid / rotate out", color: "#ef4444", blurb: "In a sector capital is rotating out of." },
+  neutral: { label: "Neutral", color: "#a1a1aa", blurb: "In a mid-pack sector — no strong rotation signal." },
+  unknown: { label: "Unclassified", color: "#71717a", blurb: "No confident sector classification." },
+};
+
 export const fmtPct = (x: number, dp = 1): string =>
   `${x >= 0 ? "+" : ""}${x.toFixed(dp)}%`;
 
